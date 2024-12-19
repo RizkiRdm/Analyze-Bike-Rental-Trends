@@ -4,15 +4,6 @@ import seaborn as sns
 import streamlit as st
 import plotly.express as px
 
-# helper function : weather sum function
-def weather_sum_bike(df):
-    weather_sum_bike = df.groupby(by="cuaca")["cnt_x"].sum().reset_index()
-
-    # rename column 'cnt_x' to 'jumlah penyewaan'
-    weather_sum_bike = weather_sum_bike.rename(columns={'cnt_x': 'jumlah_penyewaan'})
-
-    return weather_sum_bike
-
 # helper function : increase/deacrese rent bike function
 def percent_rent_bike(df):
     
@@ -54,10 +45,11 @@ def tren_rental_bike(df):
     return yearly_rentals
 
 # define data
-bike_data = pd.read_csv('bike_data.csv', parse_dates=["dteday"])
+bike_data = pd.read_csv('https://raw.githubusercontent.com/RizkiRdm/bike-sharing-analytict/refs/heads/main/dashboard/bike_data.csv', parse_dates=["dteday"])
+# bike_data = pd.read_csv('dashboard/bike_data.csv', parse_dates=["dteday"])
 
 # call function
-weather_sum_bike_data = weather_sum_bike(bike_data)
+# filtered_data = filter_weather_sum_bike(bike_data)
 percent_rent_bike_data = percent_rent_bike(bike_data)
 peak_hours_bike_data = peak_hours(bike_data)
 tren_rental_bike_data = tren_rental_bike(bike_data)
@@ -72,7 +64,7 @@ st.title("Data Analisis Bike Sharing")
 col1, col2 = st.columns(2)
 
 with col1:
-    st.image("logo.jpg")
+    st.image("dashboard/logo.jpg")
 with col2:
     st.text("Name : Rizki Romdhoni")
     st.text("Dataset : Bike Sharing Dataset")
@@ -93,16 +85,22 @@ musim_selected = st.selectbox('Pilih Musim', musim_options)
 filtered_data = bike_data[bike_data['musim'] == musim_selected]
 
 # Pastikan tipe data sudah benar
-bike_data['cuaca'] = bike_data['cuaca'].astype('category')
-bike_data['cnt_x'] = pd.to_numeric(bike_data['cnt_x'])
+filtered_data['cuaca'] = filtered_data['cuaca'].astype('category')
+filtered_data['cnt_x'] = pd.to_numeric(filtered_data['cnt_x'])
 
-fig = px.bar(filtered_data, 
+cuaca_sum = filtered_data.groupby(by=['cuaca', 'tahun_x'])['cnt_x'].sum().reset_index()
+
+
+st.divider()
+
+fig = px.bar(cuaca_sum, 
               x='cuaca', 
               y='cnt_x',
-              color="tahun_x",
+              color="tahun_x" if 'tahun_x' in cuaca_sum.columns else None,
               labels={'cuaca': 'Kondisi Cuaca', 'cnt_x': 'Jumlah Penyewaan Harian', 'tahun_x' : "Tahun"},
-              title='Pengaruh Cuaca terhadap Jumlah Penyewaan Sepeda')
+              title=f'Jumlah Penyewaan Sepeda per Cuaca pada Musim {musim_selected}')
 fig.update_layout(xaxis_tickangle=-45)
+fig.update_yaxes(tickformat=',.0f')
 st.plotly_chart(fig)
 
 # expander
