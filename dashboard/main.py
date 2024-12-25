@@ -4,34 +4,27 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import streamlit as st
 import plotly.express as px
-import datetime
-
 # helper function : increase/deacrese rent bike function
 def percent_rent_bike(df):
     
     holiday_rentals = df[df["holiday_x"] == 1]['cnt_x'].sum()
-    workingday_rentals = df[df["workingday_x"] == 0]['cnt_x'].sum()
+    workingday_rentals = df[df["workingday_x"] == 1]['cnt_x'].sum()
     total_rentals = df['cnt_x'].sum()
     
     if total_rentals == 0:
         return 0, 0
 
-    # Hitung persentase penyewaan di akhir pekan
+    # Hitung persentase
     holiday_percentage = (holiday_rentals / total_rentals) * 100
-
-    # Hitung persentase penyewaan di hari kerja
     workingday_percentage = (workingday_rentals / total_rentals) * 100
     
     return holiday_percentage, workingday_percentage
-
-# helper function : identify peak hours function
-def peak_hours(df):
-    bike_hour = df.groupby(by=["hr", "tahun_y"])["cnt_y"].sum().reset_index()
     
-    # rename column 'cnt_x' to 'jumlah penyewaan'
-    bike_hour = bike_hour.rename(columns={'tahun_y': 'tahun'})
-    return bike_hour
-
+    # weekday_avg = df[df["workingday_x"] == 1]["cnt_x"].mean()
+    # weekend_avg = df[df["workingday_x"] == 0]["cnt_x"].mean()
+    # increase_percentage = ((weekend_avg - weekday_avg) / weekday_avg) * 100 if weekday_avg != 0 else 0
+    # return weekday_avg, weekend_avg, increase_percentage
+    
 # helper function : identify Tren rental bike 
 def tren_rental_bike(df):
     yearly_rentals = df.groupby(by=["mnth_x", "tahun_x"]).agg({
@@ -52,8 +45,6 @@ bike_data = pd.read_csv('dashboard/bike_data.csv', parse_dates=["dteday"])
 
 # call function
 # filtered_data = filter_weather_sum_bike(bike_data)
-percent_rent_bike_data = percent_rent_bike(bike_data)
-peak_hours_bike_data = peak_hours(bike_data)
 tren_rental_bike_data = tren_rental_bike(bike_data)
 
 # color palette
@@ -178,72 +169,66 @@ st.divider()
 # section 4
 st.header("Berapa persen peningkatan penyewaan sepeda pada akhir pekan dibandingkan hari kerja ?")
 
-col1, col2 = st.columns(2, gap="small")
-
+# Hitung persentase
 holiday_percentage, workingday_percentage = percent_rent_bike(bike_data)
-""" labels = [holiday_percentage, workingday_percentage]
-fig = px.bar(labels, x='hr', y='cnt_y', color='tahun_y',
-            hover_data=['hr'],
-            title='Jumlah Penyewaan Sepeda Harian Berdasarkan Jam')
-fig.update_layout(
-    xaxis_title = 'jam',
-    yaxis_title = 'Jumlah penyewaan',
-    hovermode = 'x unified',
+
+bike_data['day_of_week'] = bike_data['dteday'].dt.day_name()
+weekly_trend = bike_data.groupby('day_of_week')['cnt_x'].mean().reset_index()
+
+day_order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+weekly_trend['day_of_week'] = pd.Categorical(weekly_trend['day_of_week'], categories=day_order, ordered=True)
+
+weekly_trend = weekly_trend.sort_values('day_of_week')
+
+labels = ['Hari Kerja', 'Akhir Pekan']
+percentages = [holiday_percentage, workingday_percentage]
+
+# buat dataframe baru
+chart_data = pd.DataFrame({
+    'Labels' : labels,
+    'Percentage' : percentages
+})
+
+
+
+# Bar Chart
+fig_bar_chart = px.bar(
+    chart_data,
+    x="Labels",
+    y="Percentage",
+    color="Labels",
+    text="Percentage",
+    title="Distribusi Penyewaan Sepeda",
+    color_discrete_sequence=["#636EFA", "#EF553B"],
+    text_auto=".1f %"
 )
 
-fig.update_traces(hovertemplate="<br>".join([
-    "Jumlah Penyewaan: %{y}",
-    "Jam: %{x}"
-]))
+fig_bar_chart.update_layout(
+    xaxis_title="Jenis Hari",
+    yaxis_title="Persentase Penyewaan (%)",
+    template="plotly_white"
+)
 
-st.plotly_chart(fig)
- """
+# line chart
+fig_line_chart = px.line(
+    weekly_trend,
+    x="day_of_week",
+    y="cnt_x",
+    title="Tren penyewaan sepeda dalam seminggu",
+    markers=True,
+    labels={
+        "day_of_week": "Hari", 
+        "cnt_x": "Rata-rata Penyewaan"
+    }
+)
+
+fig_line_chart.update_layout(template="plotly_white")
+
+# tampilkan chart
+st.plotly_chart(fig_bar_chart, use_container_width=True)
+st.plotly_chart(fig_line_chart, use_container_width=True)
 
 
-""" 
-# barplot
-with col1:
-    st.write("### Barchart")
-    percentages = [holiday_percentage, workingday_percentage]
-    labels = ["Akhir pekan", "Hari kerja"]
-    
-    
-    fig, ax = plt.subplots(figsize=(7, 8))
-    
-    sns.barplot(
-    x=labels,
-    y=percentages,
-    ax=ax,
-    palette=colors
-    )
-
-    # Customizing the chart
-    ax.set_title("Jumlah penyewaan sepeda di hari kerja dan akhir pekan", fontsize=18)
-    ax.set_xlabel("Persentase Penyewaan (%)", fontsize=16)
-    ax.set_ylabel("Persentase di akhir pekan dan hari kerja", fontsize=16)
-
-    # Render chart in Streamlit
-    st.pyplot(fig)
-    
-# pie chart
-with col2:
-    st.write("### Pie chart")
-    # Membuat pie chart
-    fig, ax = plt.subplots(figsize=(14, 9))
-
-    ax.pie(
-    percentages,
-    labels=labels,
-    autopct='%1.1f%%',
-    startangle=90
-    )
-
-    # Customizing the chart
-    ax.set_title("Jumlah Penyewaan Sepeda di Hari Kerja dan Akhir Pekan", fontsize=18)
-
-    # Render chart in Streamlit
-    st.pyplot(fig)
-     """
 with st.expander("Insight"):
     st.text("Penyewaan pada akhir pekan menunjukan penurun yang cukup besar, bisa disimpulkan penyebabnya adalah karena orang pada akhir pekan lebih sedikit melakukan aktivitas, seperti berangkat kerja. Berbandingkan terbalik jika di hari kerja, orang lebih banyak melakukan aktivitas seperti berangkat kerja, pergi ke sekolah atau aktivitas lainyya.")
     
