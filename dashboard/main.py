@@ -1,8 +1,10 @@
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import streamlit as st
 import plotly.express as px
+import datetime
 
 # helper function : increase/deacrese rent bike function
 def percent_rent_bike(df):
@@ -45,8 +47,8 @@ def tren_rental_bike(df):
     return yearly_rentals
 
 # define data
-bike_data = pd.read_csv('https://raw.githubusercontent.com/RizkiRdm/bike-sharing-analytict/refs/heads/main/dashboard/bike_data.csv', parse_dates=["dteday"])
-# bike_data = pd.read_csv('dashboard/bike_data.csv', parse_dates=["dteday"])
+# bike_data = pd.read_csv('https://raw.githubusercontent.com/RizkiRdm/bike-sharing-analytict/refs/heads/main/dashboard/bike_data.csv', parse_dates=["dteday"])
+bike_data = pd.read_csv('dashboard/bike_data.csv', parse_dates=["dteday"])
 
 # call function
 # filtered_data = filter_weather_sum_bike(bike_data)
@@ -113,25 +115,58 @@ st.divider()
 # section 3
 
 st.header("Bisakah kita mengidentifikasi jam-jam puncak penyewaan sepeda setiap hari ?")
-fig, ax = plt.subplots(figsize=(14, 9))
 
-sns.barplot(
-x="hr",
-y="cnt_y",
-hue="tahun",
-data=peak_hours_bike_data,
-ax=ax,
-palette=colors
-)
+min_date = bike_data['dteday'].min().date()
+max_date = bike_data['dteday'].max().date()
 
-# Customizing the chart
-ax.set_title("Jumlah Penyewaan Sepeda Harian Berdasarkan jam", fontsize=18)
-ax.set_xlabel("Jam", fontsize=16)
-ax.set_ylabel("Jumlah Penyewaan", fontsize=16)
-plt.gca().yaxis.set_major_formatter(plt.FuncFormatter(lambda x, loc: "{:,}".format(int(x))))
+# unique_dates = bike_data['dteday'].dt.date.astype('str').unique()
+day_selected = st.date_input(
+    'Pilih Hari Penyewaan sepeda',
+    value=(min_date, max_date),
+    min_value=min_date,
+    )
 
-# Render chart in Streamlit
-st.pyplot(fig)
+# Filter data
+# df_filtered = bike_data[bike_data['dteday'].dt.date.astype('str') == str(day_selected)]
+
+if len(day_selected) == 2:
+    start_date, end_date = day_selected
+    df_filtered = bike_data[(bike_data['dteday'].dt.date >= start_date) & 
+                            (bike_data['dteday'].dt.date <= end_date)]
+
+
+    # cek apakah tanggal penyewaan ada
+    if not df_filtered.empty:
+        total_rentals = df_filtered['cnt_y'].sum()   
+        fig = px.bar(df_filtered,
+                     x='hr', 
+                     y='cnt_y', 
+                     color='musim', 
+                    hover_data=['hr'],
+                    title=f'Total penyewaan sepeda harian berdasarkan Jam ({start_date} - {end_date})'
+        )
+
+        fig.update_layout(
+            xaxis_title='Jam',
+            yaxis_title='Jumlah Penyewaan',
+            hovermode='x unified',
+            template='plotly_dark', 
+            title_font=dict(size=20)
+        )
+        
+        fig.update_traces(hovertemplate="<br>".join([
+            "Jumlah Penyewaan: %{y}",
+            "Jam: %{x}"
+        ]))
+        
+        st.plotly_chart(fig)
+
+        # tampilkan total penyewaan sepeda dalam rentang waktu
+        st.write(f"##### Total Penyewaan Sepeda: {total_rentals:,} sepeda")
+    else:
+        st.warning("Tidak ada data untuk rentang tanggal yang dipilih.")
+else:
+    st.warning("Pilih rentang tanggal lengkap")
 
 # expander
 with st.expander("Insights"):
@@ -146,7 +181,26 @@ st.header("Berapa persen peningkatan penyewaan sepeda pada akhir pekan dibanding
 col1, col2 = st.columns(2, gap="small")
 
 holiday_percentage, workingday_percentage = percent_rent_bike(bike_data)
+""" labels = [holiday_percentage, workingday_percentage]
+fig = px.bar(labels, x='hr', y='cnt_y', color='tahun_y',
+            hover_data=['hr'],
+            title='Jumlah Penyewaan Sepeda Harian Berdasarkan Jam')
+fig.update_layout(
+    xaxis_title = 'jam',
+    yaxis_title = 'Jumlah penyewaan',
+    hovermode = 'x unified',
+)
 
+fig.update_traces(hovertemplate="<br>".join([
+    "Jumlah Penyewaan: %{y}",
+    "Jam: %{x}"
+]))
+
+st.plotly_chart(fig)
+ """
+
+
+""" 
 # barplot
 with col1:
     st.write("### Barchart")
@@ -189,7 +243,7 @@ with col2:
 
     # Render chart in Streamlit
     st.pyplot(fig)
-    
+     """
 with st.expander("Insight"):
     st.text("Penyewaan pada akhir pekan menunjukan penurun yang cukup besar, bisa disimpulkan penyebabnya adalah karena orang pada akhir pekan lebih sedikit melakukan aktivitas, seperti berangkat kerja. Berbandingkan terbalik jika di hari kerja, orang lebih banyak melakukan aktivitas seperti berangkat kerja, pergi ke sekolah atau aktivitas lainyya.")
     
