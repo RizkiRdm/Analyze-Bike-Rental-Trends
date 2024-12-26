@@ -6,25 +6,21 @@ import streamlit as st
 import plotly.express as px
 # helper function : increase/deacrese rent bike function
 def percent_rent_bike(df):
-    
     holiday_rentals = df[df["holiday_x"] == 1]['cnt_x'].sum()
-    workingday_rentals = df[df["workingday_x"] == 1]['cnt_x'].sum()
+    workingday_rentals = df[df["workingday_x"] == 0]['cnt_x'].sum()
     total_rentals = df['cnt_x'].sum()
-    
+
+    # Hitung persentase penyewaan di akhir pekan
+    holiday_percentage = (holiday_rentals / total_rentals) * 100
+
+    # Hitung persentase penyewaan di hari kerja
+    workingday_percentage = (workingday_rentals / total_rentals) * 100
+        
     if total_rentals == 0:
         return 0, 0
 
-    # Hitung persentase
-    holiday_percentage = (holiday_rentals / total_rentals) * 100
-    workingday_percentage = (workingday_rentals / total_rentals) * 100
-    
     return holiday_percentage, workingday_percentage
-    
-    # weekday_avg = df[df["workingday_x"] == 1]["cnt_x"].mean()
-    # weekend_avg = df[df["workingday_x"] == 0]["cnt_x"].mean()
-    # increase_percentage = ((weekend_avg - weekday_avg) / weekday_avg) * 100 if weekday_avg != 0 else 0
-    # return weekday_avg, weekend_avg, increase_percentage
-    
+
 # helper function : identify Tren rental bike 
 def tren_rental_bike(df):
     yearly_rentals = df.groupby(by=["mnth_x", "tahun_x"]).agg({
@@ -42,10 +38,6 @@ def tren_rental_bike(df):
 # define data
 # bike_data = pd.read_csv('https://raw.githubusercontent.com/RizkiRdm/bike-sharing-analytict/refs/heads/main/dashboard/bike_data.csv', parse_dates=["dteday"])
 bike_data = pd.read_csv('dashboard/bike_data.csv', parse_dates=["dteday"])
-
-# call function
-# filtered_data = filter_weather_sum_bike(bike_data)
-tren_rental_bike_data = tren_rental_bike(bike_data)
 
 # color palette
 colors = ["#69b3a2", "#4374B3"]
@@ -180,7 +172,7 @@ weekly_trend['day_of_week'] = pd.Categorical(weekly_trend['day_of_week'], catego
 
 weekly_trend = weekly_trend.sort_values('day_of_week')
 
-labels = ['Hari Kerja', 'Akhir Pekan']
+labels = ['Akhir Pekan', 'Hari Kerja']
 percentages = [holiday_percentage, workingday_percentage]
 
 # buat dataframe baru
@@ -188,8 +180,6 @@ chart_data = pd.DataFrame({
     'Labels' : labels,
     'Percentage' : percentages
 })
-
-
 
 # Bar Chart
 fig_bar_chart = px.bar(
@@ -200,7 +190,7 @@ fig_bar_chart = px.bar(
     text="Percentage",
     title="Distribusi Penyewaan Sepeda",
     color_discrete_sequence=["#636EFA", "#EF553B"],
-    text_auto=".1f %"
+    text_auto=".1f"
 )
 
 fig_bar_chart.update_layout(
@@ -214,10 +204,10 @@ fig_line_chart = px.line(
     weekly_trend,
     x="day_of_week",
     y="cnt_x",
-    title="Tren penyewaan sepeda dalam seminggu",
+    title="Tren rata-rata penyewaan sepeda dalam seminggu",
     markers=True,
     labels={
-        "day_of_week": "Hari", 
+        "day_of_week": "Hari/Day", 
         "cnt_x": "Rata-rata Penyewaan"
     }
 )
