@@ -1,7 +1,4 @@
 import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
 import streamlit as st
 import plotly.express as px
 # helper function : increase/deacrese rent bike function
@@ -21,23 +18,9 @@ def percent_rent_bike(df):
 
     return holiday_percentage, workingday_percentage
 
-# helper function : identify Tren rental bike 
-def tren_rental_bike(df):
-    yearly_rentals = df.groupby(by=["mnth_x", "tahun_x"]).agg({
-        "cnt_x": "mean",
-        "cnt_y": "sum"
-    }).reset_index()
-
-    yearly_rentals.rename(columns={
-        "mnth_x" : "bulan",
-        "tahun_x" : "tahun",
-    }, inplace=True)
-
-    return yearly_rentals
-
 # define data
-# bike_data = pd.read_csv('https://raw.githubusercontent.com/RizkiRdm/bike-sharing-analytict/refs/heads/main/dashboard/bike_data.csv', parse_dates=["dteday"])
-bike_data = pd.read_csv('dashboard/bike_data.csv', parse_dates=["dteday"])
+bike_data = pd.read_csv('https://raw.githubusercontent.com/RizkiRdm/bike-sharing-analytict/refs/heads/main/dashboard/bike_data.csv', parse_dates=["dteday"])
+# bike_data = pd.read_csv('dashboard/bike_data.csv', parse_dates=["dteday"])
 
 # color palette
 colors = ["#69b3a2", "#4374B3"]
@@ -220,56 +203,54 @@ st.plotly_chart(fig_line_chart, use_container_width=True)
 
 
 with st.expander("Insight"):
-    st.text("Penyewaan pada akhir pekan menunjukan penurun yang cukup besar, bisa disimpulkan penyebabnya adalah karena orang pada akhir pekan lebih sedikit melakukan aktivitas, seperti berangkat kerja. Berbandingkan terbalik jika di hari kerja, orang lebih banyak melakukan aktivitas seperti berangkat kerja, pergi ke sekolah atau aktivitas lainyya.")
-    
+    st.write("- Penyewaan pada akhir pekan menunjukan penurun yang cukup besar, bisa disimpulkan penyebabnya adalah karena orang pada akhir pekan lebih sedikit melakukan aktivitas, seperti berangkat kerja. Berbandingkan terbalik jika di hari kerja, orang lebih banyak melakukan aktivitas seperti berangkat kerja, pergi ke sekolah atau aktivitas lainyya.\n - Rata-rata penyewaan dalam seminggu selalu meningkat dari hari senin sampai hari jum'at, sedangkan ketika masuk ke hari sabtu dan minggu tren nya menurun cukup drastis.")
+
 st.divider()
 
 # SECTION 5
 st.header("Bagaimana tren penyewaan sepeda berubah dari tahun 2011 ke 2012 ?")
-col1, col2 = st.columns(2, gap="small")
 
-with col1:
-    fig, ax = plt.subplots(figsize=(14, 9))
+month_select = bike_data['bulan'].unique()
+bulan_selected = st.multiselect("Pilih Bulan", month_select)
 
-    sns.lineplot(
-    x="bulan",
-    y="cnt_y",
-    hue="tahun",
-    data=tren_rental_bike_data,
-    ax=ax,
-    palette=colors
-    )
+filtered_data = bike_data[bike_data['bulan'].isin(bulan_selected)]
 
-    # Customizing the chart
-    ax.set_title("Jumlah total Penyewaan Sepeda Berdasarkan Bulan dan Tahun", fontsize=22)
-    ax.set_xlabel("Bulan", fontsize=16)
-    ax.set_ylabel("Jumlah Penyewaan", fontsize=16)
-    plt.xticks(range(1,13))
-    plt.gca().yaxis.set_major_formatter(plt.FuncFormatter(lambda x, loc: "{:,}".format(int(x))))
+# ubah tipe data 'bulan' jadi tipe data categorical
+bike_data['bulan'] = pd.Categorical(bike_data['bulan'], categories=bike_data['bulan'].unique(), ordered=True)
 
-    # Render chart in Streamlit
-    st.pyplot(fig)
-    
-with col2:
-    fig, ax = plt.subplots(figsize=(14, 9))
+tren_rental_bike_data = bike_data.groupby(by=["bulan", "tahun_x"]).agg({
+    "cnt_x": "mean"
+}).reset_index()
 
-    sns.barplot(
+# ubah nama kolom tahun_x jadi tahun
+tren_rental_bike_data.rename(columns={
+    'tahun_x' : 'tahun'
+}, inplace=True)
+
+data_to_plot = filtered_data if not filtered_data.empty else tren_rental_bike_data
+
+
+# make chart
+fig = px.bar(
+    data_to_plot,
     x="bulan",
     y="cnt_x",
-    hue="tahun",
-    data=tren_rental_bike_data,
-    ax=ax,
-    palette=colors
-    )
+    color="tahun",
+    title="Tren penyewaan sepeda berdasarkan bulan dan tahun"
+)
 
-    # Customizing the chart
-    ax.set_title("Jumlah Penyewaan Sepeda Harian Berdasarkan Bulan dan Tahun", fontsize=22)
-    ax.set_xlabel("Bulan", fontsize=16)
-    ax.set_ylabel("Jumlah Penyewaan", fontsize=16)
-    plt.gca().yaxis.set_major_formatter(plt.FuncFormatter(lambda x, loc: "{:,}".format(int(x))))
 
-    # Render chart in Streamlit
-    st.pyplot(fig)
+# Tambahkan keterangan pada grafik
+fig.update_layout(
+    xaxis_title="Bulan",
+    yaxis_title="Jumlah Penyewaan"
+)
+
+if data_to_plot.empty:
+    st.warning("tidak ada data")
+else:
+    st.plotly_chart(fig)
+
 
 with st.expander("insight"):
     st.write("- Jumlah penyewaan sepeda dari tahun 2011 sampai tahun 2012 mengalami peningkatan yang cukup besar.\n- Rata-rata jumlah penyewaan sepeda di tahun 2012 ada di angka 3.000 sampai diatas 7.000 sepeda dan terbanyak ada di bulan september (9) di tahun 2012.\n- Terdapat pola musiman yang jelas pada jumlah penyewaan sepeda. Jumlah penyewaan cenderung meningkat pada bulan-bulan tertentu seperti dari bulan maret (3) sampai bulan september (9) dan menurun pada bulan-bulan seperti bulan oktober (10) sampai bulan februari (2). Ini menunjukkan bahwa faktor cuaca, musim, atau event tertentu dapat mempengaruhi minat masyarakat untuk menyewa sepeda.")
