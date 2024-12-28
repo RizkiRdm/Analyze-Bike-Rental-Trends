@@ -45,7 +45,3 @@ Dataset yang digunakan dalam proyek ini terdiri dari dua bagian:
    ```
 
 5. Buka file `Proyek_Analisis_Data.ipynb` dan jalankan setiap sel untuk melihat hasil analisis.
-
----
-
-Feel free to edit and adjust as needed.
