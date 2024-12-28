@@ -1,7 +1,3 @@
-Here is the content for your `README.md` file:
-
----
-
 # Proyek Analisis Data: bike-sharing-dataset
 
 **Nama:** Rizki Romdhoni  
