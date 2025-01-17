@@ -45,3 +45,8 @@ Dataset yang digunakan dalam proyek ini terdiri dari dua bagian:
    ```
 
 5. Buka file `Proyek_Analisis_Data.ipynb` dan jalankan setiap sel untuk melihat hasil analisis.
+
+6. Jalankan dashboard
+   ```bash
+   streamlit run dashboard/main.py
+   ```
